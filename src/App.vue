@@ -16,6 +16,16 @@ export default {
 </script>
 
 <style lang="scss">
+* {
+  ::-webkit-scrollbar-track {
+    position: absolute;
+    background-color: #00000099;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+}
 #app,
 body {
   font-family: "Courier New", Helvetica, Arial, sans-serif;

@@ -43,11 +43,11 @@
           </tr>
           <tr>
             <td>y<sup>A</sup> * A<sup>B</sup> (mod p)</td>
-            <td>{{ checked }}</td>
+            <td>{{ res1 }}</td>
           </tr>
           <tr>
             <td>g<sup>hash</sup> (mod p)</td>
-            <td>{{ checked }}</td>
+            <td>{{ res2 }}</td>
           </tr>
           <tr>
             <td colspan="2" :class="{ green: checked, red: !checked }">
@@ -85,7 +85,7 @@
 import forge from "node-forge";
 const bigInt = require("big-integer");
 
-String.prototype.hashCode = function () {
+String.prototype.hashCode = function (p) {
   var hash = 0;
   if (this.length == 0) {
     return hash;
@@ -95,7 +95,7 @@ String.prototype.hashCode = function () {
     hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
-  return hash;
+  return bigInt(bigInt(hash).abs() + bigInt(p)).mod(bigInt(p));
 };
 
 export default {
@@ -117,6 +117,8 @@ export default {
       hash1: null,
       bits: 24,
       checked: 0,
+      res1: 0,
+      res2: 0,
     };
   },
   watch: {
@@ -159,8 +161,7 @@ export default {
         this.hash = 0;
         return;
       }
-      let M = bigInt(this.send.hashCode());
-      this.hash = bigInt(M % this.p);
+      this.hash = bigInt(this.send.hashCode(this.p));
 
       // K - взаимно просто с p-1 и 1<k<p-1
       forge.prime.generateProbablePrime(this.bits, (err, num) => {
@@ -209,13 +210,12 @@ export default {
         return;
       }
 
-      let L = bigInt(this.send.hashCode());
-      this.hash1 = bigInt(L % this.p);
+      this.hash1 = bigInt(this.send.hashCode(this.p));
 
-      let res1 = this.check1(this.y, this.A, this.B, this.p).value;
-      let res2 = this.check2(this.g, this.hash1, this.p).value;
-      if (res1 == res2) {
-        this.checked = res1;
+      this.res1 = this.check1(this.y, this.A, this.B, this.p).value;
+      this.res2 = this.check2(this.g, this.hash1, this.p).value;
+      if (this.res1 == this.res2) {
+        this.checked = this.res1;
       } else {
         this.checked = 0;
       }
