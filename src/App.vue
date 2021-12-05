@@ -1,5 +1,7 @@
 <template>
-  <Main />
+  <div>
+    <Main />
+  </div>
 </template>
 
 <script>

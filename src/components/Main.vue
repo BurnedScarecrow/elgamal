@@ -5,7 +5,6 @@
       <div class="left">
         <h2>Отправитель</h2>
         <textarea class="text" cols="30" rows="10" v-model="m"></textarea>
-        <button @click="start">Подписать</button>
         <br />
         Открытый ключ:
         <div>p: {{ p }}</div>
@@ -44,15 +43,15 @@
           </tr>
           <tr>
             <td>y<sup>A</sup> * A<sup>B</sup> (mod p)</td>
-            <td>{{ check1(y, A, B, p) }}</td>
+            <td>{{ checked }}</td>
           </tr>
           <tr>
             <td>g<sup>hash</sup> (mod p)</td>
-            <td>{{ check2(g, hash1, p) }}</td>
+            <td>{{ checked }}</td>
           </tr>
           <tr>
-            <td colspan="2" :class="{ green: check(), red: !check() }">
-              <div v-if="check()">Verified signature</div>
+            <td colspan="2" :class="{ green: checked, red: !checked }">
+              <div v-if="checked">Verified signature</div>
               <div v-else>Invalid signature</div>
             </td>
           </tr>
@@ -86,12 +85,25 @@
 import forge from "node-forge";
 const bigInt = require("big-integer");
 
+String.prototype.hashCode = function () {
+  var hash = 0;
+  if (this.length == 0) {
+    return hash;
+  }
+  for (var i = 0; i < this.length; i++) {
+    var char = this.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash;
+};
+
 export default {
   name: "Main",
   data() {
     return {
-      m: "SECRET Message",
-      send: "",
+      m: null,
+      send: null,
       prime: null,
       p: null,
       g: null,
@@ -104,6 +116,7 @@ export default {
       hash: null,
       hash1: null,
       bits: 24,
+      checked: 0,
     };
   },
   watch: {
@@ -116,8 +129,8 @@ export default {
     },
   },
   mounted() {
-    this.send = this.m;
-    // this.start();
+    this.m = "Secret message";
+    this.start();
   },
   methods: {
     start() {
@@ -136,11 +149,6 @@ export default {
 
       // y = g^x mod p
       this.y = this.g.modPow(this.x, this.p);
-
-      // Генерация хеша и дайджеста
-      setTimeout(() => {
-        this.sign();
-      }, 100);
     },
     getRandomInt(max) {
       return BigInt(Math.floor(Math.random() * max).toString());
@@ -151,10 +159,7 @@ export default {
         this.hash = 0;
         return;
       }
-      let M = 0;
-      this.m.split("").forEach((element) => {
-        M += parseInt(element.charCodeAt(0));
-      });
+      let M = bigInt(this.send.hashCode());
       this.hash = bigInt(M % this.p);
 
       // K - взаимно просто с p-1 и 1<k<p-1
@@ -179,10 +184,8 @@ export default {
       const module = bigInt(this.p - 1);
 
       let mult = bigInt(this.x * this.A).mod(module);
-      console.log(mult);
 
       let sub = bigInt(bigInt(bigInt(this.hash) - mult).mod(module) + module);
-      console.log(sub);
 
       this.B = bigInt(bigInt(sub).multiply(invK)).mod(module);
     },
@@ -205,11 +208,17 @@ export default {
         this.hash1 = 0;
         return;
       }
-      let L = 0;
-      this.send.split("").forEach((element) => {
-        L += parseInt(element.charCodeAt(0));
-      });
+
+      let L = bigInt(this.send.hashCode());
       this.hash1 = bigInt(L % this.p);
+
+      let res1 = this.check1(this.y, this.A, this.B, this.p).value;
+      let res2 = this.check2(this.g, this.hash1, this.p).value;
+      if (res1 == res2) {
+        this.checked = res1;
+      } else {
+        this.checked = 0;
+      }
 
       return (
         this.check1(this.y, this.A, this.B, this.p).value ==
